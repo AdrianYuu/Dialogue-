@@ -1,7 +1,7 @@
 import { Role } from '@renderer/constants/RoleConstant'
 import LoginPage from '@renderer/pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
-import HomePage from '@renderer/pages/HomePage'
+// import HomePage from '@renderer/pages/HomePage'
 
 export interface IMenu {
   name: string
@@ -15,7 +15,7 @@ export const MENU_LIST: IMenu[] = [
     name: 'home',
     path: '/',
     roleAllowed: Role.USER,
-    element: <HomePage />
+    element: <RegisterPage />
   },
   {
     name: 'register',

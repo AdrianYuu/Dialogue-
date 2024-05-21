@@ -1,5 +1,5 @@
 const LoginPage = (): JSX.Element => {
-  return <div>LoginPage</div>
+  return <button className="btn">Button</button>
 }
 
 export default LoginPage
