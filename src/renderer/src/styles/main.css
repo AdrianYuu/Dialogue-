@@ -2,9 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-.bg-discord{
-    background-image: url('../../src/assets/images/t7b5j2cqpce21.webp');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeats;
+.bg-discord {
+  background-image: url('../../src/assets/images/t7b5j2cqpce21.webp');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeats;
+}
+
+::-webkit-scrollbar {
+  display: none;
 }
