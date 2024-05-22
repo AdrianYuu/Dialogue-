@@ -4,7 +4,7 @@ import { createContext, useContext, useState } from 'react'
 
 interface IUserContext {
   user: IUser | null
-  login: () => boolean
+  login: (email: string, password: string) => boolean
 }
 
 const userContext = createContext<IUserContext>({} as IUserContext)
@@ -18,9 +18,30 @@ export function UserProvider({ children }: IChildren): JSX.Element {
       : null
   )
 
-  const login = (): boolean => {
+  function login(email: string, password: string): boolean {
+    if (email === 'adrianyu@gmail.com' && password === 'adrian') {
+      setUser({
+        userId: 1,
+        name: 'adrian',
+        email: 'adrianyu@gmail.com',
+        password: 'adrian',
+        role: 'Admin'
+      })
+      localStorage.setItem(
+        USER_KEY,
+        JSON.stringify({
+          userId: 1,
+          name: 'adrian',
+          email: 'adrianyu@gmail.com',
+          password: 'adrian',
+          role: 'Admin'
+        })
+      )
+      return true
+    }
+
     setUser(null)
-    return true
+    return false
   }
 
   const data = { user, login }

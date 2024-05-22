@@ -1,9 +1,10 @@
 import InputForm from '@renderer/components/InputForm'
 import { FormEvent, useEffect, useState } from 'react'
 import Button from '../../components/Button'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 const RegisterPage = (): JSX.Element => {
+  const navigate = useNavigate()
   const [name, setName] = useState<string>('')
   const [email, setEmail] = useState<string>('')
   const [password, setPassword] = useState<string>('')
@@ -33,7 +34,9 @@ const RegisterPage = (): JSX.Element => {
     if (!validateFormData()) return
 
     setStatus('success')
-    setError('')
+    setTimeout(() => {
+      navigate('/auth/login')
+    }, 1000)
   }
 
   useEffect(() => {

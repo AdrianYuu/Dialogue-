@@ -18,12 +18,12 @@ const RouteCheck = (routeCheck: IRouteCheck): ReactNode => {
       }
     } else if (routeCheck.allowedRole === Role.USER) {
       if (user === undefined || user === null) {
-        navigate('/login')
+        navigate('/auth/login')
       }
     } else if (routeCheck.allowedRole === Role.ADMIN) {
       if (user === undefined || user === null) {
-        navigate('/login')
-      } else if (user.Role !== 'Admin') {
+        navigate('/auth/login')
+      } else if (user.role !== 'Admin') {
         navigate('/')
       }
     }

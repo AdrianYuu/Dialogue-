@@ -1,9 +1,12 @@
 import InputForm from '@renderer/components/InputForm'
 import { FormEvent, useEffect, useState } from 'react'
 import Button from '../../components/Button'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import useUser from '@renderer/contexts/UserContext'
 
 const LoginPage = (): JSX.Element => {
+  const navigate = useNavigate()
+  const { login } = useUser()
   const [email, setEmail] = useState<string>('')
   const [password, setPassword] = useState<string>('')
   const [status, setStatus] = useState<string>('')
@@ -30,8 +33,16 @@ const LoginPage = (): JSX.Element => {
 
     if (!validateFormData()) return
 
+    if (!login(email, password)) {
+      setStatus('failed')
+      setError('Login failed.')
+      return
+    }
+
     setStatus('success')
-    setError('')
+    setTimeout(() => {
+      navigate('/')
+    }, 1000)
   }
 
   useEffect(() => {
