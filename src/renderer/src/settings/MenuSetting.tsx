@@ -19,13 +19,13 @@ export const MENU_LIST: IMenu[] = [
   },
   {
     name: 'register',
-    path: '/register',
+    path: '/auth/register',
     roleAllowed: Role.UNAUTHORIZED,
     element: <RegisterPage />
   },
   {
     name: 'login',
-    path: '/login',
+    path: '/auth/login',
     roleAllowed: Role.UNAUTHORIZED,
     element: <LoginPage />
   }

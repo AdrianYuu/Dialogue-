@@ -18,7 +18,7 @@ const InputForm = ({
   return (
     <label className="form-control w-full">
       <div className="label">
-        <span className="label-text text-white">{label}</span>
+        <span className="label-text text-white text-sm">{label}</span>
       </div>
       <input
         type={type}
