@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import DummyPP from '@renderer/assets/images/dummypp.png'
 import { IServer } from '@renderer/interfaces/ServerInterface'
 import { DUMMY_SERVER_LIST } from '@renderer/seeders/ServerDummy'
+import Arrow from '@renderer/assets/images/arrow.png'
 
 const HomePage = (): JSX.Element => {
   const [userList, setUserList] = useState<IUser[]>([])
@@ -63,7 +64,9 @@ const HomePage = (): JSX.Element => {
               type="text"
               className="bg-gray-500 w-full rounded-lg text-white text-lg outline-none"
             />
-            <p className="text-white font-bold text-3xl">{'>'}</p>
+            <button type="button">
+              <img src={Arrow} alt="" width={15} />
+            </button>
           </div>
         </div>
       </div>
