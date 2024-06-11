@@ -1,10 +1,11 @@
+import { apiGet, apiPost } from '@renderer/api/ApiService'
 import { IChildren } from '@renderer/interfaces/ChildrenInterface'
 import { IUser } from '@renderer/interfaces/UserInterface'
 import { createContext, useContext, useState } from 'react'
 
 interface IUserContext {
   user: IUser | null
-  login: (email: string, password: string) => boolean
+  login: (email: string, password: string) => Promise<boolean>
 }
 
 const userContext = createContext<IUserContext>({} as IUserContext)
@@ -18,30 +19,36 @@ export function UserProvider({ children }: IChildren): JSX.Element {
       : null
   )
 
-  function login(email: string, password: string): boolean {
-    if (email === 'adrianyu@gmail.com' && password === 'adrian') {
-      setUser({
-        userId: 1,
-        name: 'adrian',
-        email: 'adrianyu@gmail.com',
-        password: 'adrian',
-        role: 'Admin'
-      })
-      localStorage.setItem(
-        USER_KEY,
-        JSON.stringify({
-          userId: 1,
-          name: 'adrian',
-          email: 'adrianyu@gmail.com',
-          password: 'adrian',
-          role: 'Admin'
-        })
+  async function login(email: string, password: string): Promise<boolean> {
+    let response
+
+    try {
+      response = await apiGet(
+        `http://localhost:8000/api/v1/users/auth/login?email=${email}&password=${password}`
       )
-      return true
+    } catch (error) {
+      setUser(null)
+      return false
     }
 
-    setUser(null)
-    return false
+    setUser({
+      id: response.id,
+      email: response.email,
+      password: response.password,
+      username: response.username,
+      displayName: response.displayName
+    })
+    localStorage.setItem(
+      USER_KEY,
+      JSON.stringify({
+        id: response.id,
+        email: response.email,
+        password: response.password,
+        username: response.username,
+        displayName: response.displayName
+      })
+    )
+    return true
   }
 
   const data = { user, login }

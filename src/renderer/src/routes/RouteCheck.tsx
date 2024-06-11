@@ -20,12 +20,6 @@ const RouteCheck = (routeCheck: IRouteCheck): ReactNode => {
       if (user === undefined || user === null) {
         navigate('/auth/login')
       }
-    } else if (routeCheck.allowedRole === Role.ADMIN) {
-      if (user === undefined || user === null) {
-        navigate('/auth/login')
-      } else if (user.role !== 'Admin') {
-        navigate('/')
-      }
     }
   }, [])
 

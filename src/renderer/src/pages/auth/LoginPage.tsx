@@ -27,13 +27,13 @@ const LoginPage = (): JSX.Element => {
     return true
   }
 
-  const handleSubmit = (e: FormEvent): void => {
+  const handleSubmit = async (e: FormEvent): Promise<void> => {
     e.preventDefault()
     resetData()
 
     if (!validateFormData()) return
 
-    if (!login(email, password)) {
+    if (!(await login(email, password))) {
       setStatus('failed')
       setError('Login failed.')
       return

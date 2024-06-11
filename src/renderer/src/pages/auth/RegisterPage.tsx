@@ -2,13 +2,17 @@ import InputForm from '@renderer/components/InputForm'
 import { FormEvent, useEffect, useState } from 'react'
 import Button from '../../components/Button'
 import { Link, useNavigate } from 'react-router-dom'
+import { IUser } from '@renderer/interfaces/UserInterface'
+import { apiPost } from '@renderer/api/ApiService'
 
 const RegisterPage = (): JSX.Element => {
   const navigate = useNavigate()
-  const [name, setName] = useState<string>('')
   const [email, setEmail] = useState<string>('')
   const [password, setPassword] = useState<string>('')
   const [confirmPassword, setConfirmPassword] = useState<string>('')
+  const [username, setUsername] = useState<string>('')
+  const [displayName, setDisplayName] = useState<string>('')
+
   const [status, setStatus] = useState<string>('')
   const [error, setError] = useState<string>('')
 
@@ -18,20 +22,39 @@ const RegisterPage = (): JSX.Element => {
   }
 
   const validateFormData = (): boolean => {
-    if (name === '' || email === '' || password === '' || confirmPassword == '') {
+    if (
+      email === '' ||
+      password === '' ||
+      confirmPassword === '' ||
+      username === '' ||
+      displayName === ''
+    ) {
       setStatus('failed')
       setError('All field is required to be filled.')
+      return false
+    } else if (password !== confirmPassword) {
+      setStatus('failed')
+      setError('Password and confirm password must be the same.')
       return false
     }
 
     return true
   }
 
-  const handleSubmit = (e: FormEvent): void => {
+  const handleSubmit = async (e: FormEvent): Promise<void> => {
     e.preventDefault()
     resetData()
 
     if (!validateFormData()) return
+
+    try {
+      await apiPost('http://localhost:8000/api/v1/users/create', {
+        email: email,
+        password: password,
+        username: username,
+        displayName: displayName
+      })
+    } catch (error) {}
 
     setStatus('success')
     setTimeout(() => {
@@ -45,7 +68,7 @@ const RegisterPage = (): JSX.Element => {
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-discord">
-      <div className="w-[35rem] h-[43rem] bg-gray-700 rounded-3xl">
+      <div className="w-[35rem] h-[50rem] bg-gray-700 rounded-3xl">
         <form className="flex flex-col p-[2rem]" onSubmit={handleSubmit}>
           <h1 className="font-semibold text-white text-3xl text-center mt-[2rem] mb-[2rem]">
             Create an Account
@@ -53,13 +76,6 @@ const RegisterPage = (): JSX.Element => {
           <div className="flex flex-col gap-4 mb-[7rem]">
             <InputForm
               label="Name"
-              type="text"
-              value={name}
-              placeholder="Name"
-              onChange={(e) => setName(e)}
-            />
-            <InputForm
-              label="Email"
               type="text"
               value={email}
               placeholder="Email"
@@ -78,6 +94,20 @@ const RegisterPage = (): JSX.Element => {
               value={confirmPassword}
               placeholder="Confirm Password"
               onChange={(e) => setConfirmPassword(e)}
+            />
+            <InputForm
+              label="Username"
+              type="text"
+              value={username}
+              placeholder="Username"
+              onChange={(e) => setUsername(e)}
+            />
+            <InputForm
+              label="Display Name"
+              type="text"
+              value={displayName}
+              placeholder="Display Name"
+              onChange={(e) => setDisplayName(e)}
             />
             <div className="flex flex-col gap-5 my-5">
               <Button label="Submit" type="submit" style="w-full btn btn-neutral" />

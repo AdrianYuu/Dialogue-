@@ -2,18 +2,91 @@ import { IUser } from '@renderer/interfaces/UserInterface'
 import { DUMMY_USER_LIST } from '@renderer/seeders/UserDummy'
 import { useEffect, useState } from 'react'
 import DummyPP from '@renderer/assets/images/dummypp.png'
-import { IServer } from '@renderer/interfaces/ServerInterface'
-import { DUMMY_SERVER_LIST } from '@renderer/seeders/ServerDummy'
 import Arrow from '@renderer/assets/images/arrow.png'
+import InputForm from '@renderer/components/InputForm'
+import { apiGet, apiPost } from '@renderer/api/ApiService'
+import useUser from '@renderer/contexts/UserContext'
 
 const HomePage = (): JSX.Element => {
   const [userList, setUserList] = useState<IUser[]>([])
-  const [serverList, setServerList] = useState<IServer[]>([])
+  const [isOpen, setIsOpen] = useState<boolean>(false)
+  const [quantity, setQuantity] = useState<string>('')
+  const [userIds, setUserIds] = useState<string[]>([])
+  const { user } = useUser()
 
   useEffect(() => {
     setUserList(DUMMY_USER_LIST)
-    setServerList(DUMMY_SERVER_LIST)
   }, [])
+
+  const handleChangeQuantity = (quantity: string) => {
+    setQuantity(quantity)
+    const newQuantity = parseInt(quantity, 10)
+    if (!isNaN(newQuantity) && newQuantity > 0) {
+      setUserIds(Array(newQuantity).fill(''))
+    } else {
+      setUserIds([])
+    }
+  }
+
+  const handleChangeUserId = (index: number, value: string) => {
+    const newUserIds = [...userIds]
+    newUserIds[index] = value
+    setUserIds(newUserIds)
+  }
+
+  const renderUserInputs = () => {
+    return userIds.map((userId, index) => (
+      <div key={index}>
+        <InputForm
+          label={`User ID #${index + 1}`}
+          type="text"
+          value={userId}
+          placeholder="User ID"
+          onChange={(e) => handleChangeUserId(index, e)}
+        />
+      </div>
+    ))
+  }
+
+  const validateUserId = () => {
+    for (let i = 0; i < userIds.length; i++) {
+      if (userIds[i] === '') {
+        return false
+      }
+    }
+
+    return true
+  }
+
+  const handleCreateNewChat = async () => {
+    if (!validateUserId()) return
+
+    let chatTitle = ''
+    let response
+
+    const currentUserID = user!.id
+    let temp = userIds
+    temp = [...temp, currentUserID]
+
+    for (let i = 0; i < temp.length; i++) {
+      try {
+        response = await apiGet(`http://localhost:8000/api/v1/users/get/${temp[i]}`)
+      } catch (error) {}
+
+      if (i != temp.length - 1) {
+        chatTitle += response.username + ', '
+      } else {
+        chatTitle += response.username
+      }
+    }
+
+    try {
+      response = await apiPost('http://localhost:8000/api/v1/chats/create', {
+        memberIds: temp,
+        title: chatTitle
+      })
+    } catch (error) {}
+  }
 
   return (
     <div className="bg-gray-700 h-screen flex w-full">
@@ -21,11 +94,34 @@ const HomePage = (): JSX.Element => {
         <div className="p-5 flex flex-col gap-5 mt-5">
           <img src={DummyPP} alt="serverPic" className="rounded-full" />
           <hr className="h-[3px] bg-gray-700 outline-none border-none rounded-xl" />
-          {serverList.map((_, index) => (
-            <div key={index}>
-              <img src={DummyPP} alt="serverPic" className="rounded-full" />
-            </div>
-          ))}
+          <button className="btn" onClick={() => setIsOpen((prev) => !prev)}>
+            +
+          </button>
+          {isOpen && (
+            <dialog className="modal" open>
+              <div className="modal-box bg-gray-800">
+                <h3 className="font-bold text-xl text-white">Create new chat!</h3>
+                <InputForm
+                  label="User Count"
+                  type="text"
+                  value={quantity}
+                  placeholder="User Count"
+                  onChange={handleChangeQuantity}
+                />
+
+                {renderUserInputs()}
+
+                <div className="modal-action">
+                  <button className="btn" onClick={handleCreateNewChat}>
+                    Create
+                  </button>
+                  <button className="btn" onClick={() => setIsOpen(false)}>
+                    Close
+                  </button>
+                </div>
+              </div>
+            </dialog>
+          )}
         </div>
       </div>
       <div className="bg-gray-800 w-1/5">
@@ -36,7 +132,7 @@ const HomePage = (): JSX.Element => {
             userList.map((user, index) => (
               <div key={index} className="flex gap-3 items-center hover:bg-gray-700 rounded-2xl">
                 <img src={DummyPP} alt="profilePic" className="w-[2.5rem] rounded-full" />
-                <p className="text-white font-semibold text-sm">{user.name}</p>
+                <p className="text-white font-semibold text-sm">{user.username}</p>
               </div>
             ))}
         </div>
