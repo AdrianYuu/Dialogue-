@@ -1,4 +1,6 @@
+import { db } from '@renderer/firebase'
 import axios from 'axios'
+import { addDoc, collection } from 'firebase/firestore'
 
 export const apiPost = async (url: string, data: any) => {
   try {
@@ -16,4 +18,8 @@ export const apiGet = async (url: string) => {
   } catch (error: any) {
     throw new Error(error.response.data.error)
   }
+}
+
+export const triggerFirebase = async () => {
+  await addDoc(collection(db, 'chat'), { message: 'success' })
 }

@@ -1,27 +1,46 @@
-import { IUser } from '@renderer/interfaces/UserInterface'
-import { DUMMY_USER_LIST } from '@renderer/seeders/UserDummy'
 import { useEffect, useState } from 'react'
 import DummyPP from '@renderer/assets/images/dummypp.png'
 import Arrow from '@renderer/assets/images/arrow.png'
 import InputForm from '@renderer/components/InputForm'
-import { apiGet, apiPost } from '@renderer/api/ApiService'
+import { apiGet, apiPost, triggerFirebase } from '@renderer/api/ApiService'
 import useUser from '@renderer/contexts/UserContext'
+import { IConversation } from '@renderer/interfaces/ConversationInterface'
+import ChatBubble from './../components/ChatBubble'
+import { collection, onSnapshot, query } from 'firebase/firestore'
+import { db } from '@renderer/firebase'
 
 const HomePage = (): JSX.Element => {
-  const [userList, setUserList] = useState<IUser[]>([])
-  const [isOpen, setIsOpen] = useState<boolean>(false)
+  const { user } = useUser()
   const [quantity, setQuantity] = useState<string>('')
   const [userIds, setUserIds] = useState<string[]>([])
-  const { user } = useUser()
+  const [status, setStatus] = useState<string>('')
+  const [error, setError] = useState<string>('')
+  const [conversations, setConversations] = useState<IConversation[]>([])
+  const [conversation, setConversation] = useState<IConversation | null>()
+  const [text, setText] = useState<string>('')
+  const [isOpen, setIsOpen] = useState<boolean>(false)
 
   useEffect(() => {
-    setUserList(DUMMY_USER_LIST)
+    const unsubscribe = onSnapshot(query(collection(db, 'chat')), () => {
+      fetchConversation(conversation!.id)
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [conversation?.id])
+
+  useEffect(() => {
+    const getData = async () => {
+      setConversations(await apiGet(`http://localhost:8000/api/v1/chats/getForUser/${user!.id}`))
+    }
+    getData()
   }, [])
 
   const handleChangeQuantity = (quantity: string) => {
     setQuantity(quantity)
     const newQuantity = parseInt(quantity, 10)
-    if (!isNaN(newQuantity) && newQuantity > 0) {
+    if (!isNaN(newQuantity) && newQuantity > 0 && newQuantity < 6) {
       setUserIds(Array(newQuantity).fill(''))
     } else {
       setUserIds([])
@@ -38,10 +57,10 @@ const HomePage = (): JSX.Element => {
     return userIds.map((userId, index) => (
       <div key={index}>
         <InputForm
-          label={`User ID #${index + 1}`}
+          label={`User #${index + 1}`}
           type="text"
           value={userId}
-          placeholder="User ID"
+          placeholder="Enter User ID..."
           onChange={(e) => handleChangeUserId(index, e)}
         />
       </div>
@@ -49,17 +68,21 @@ const HomePage = (): JSX.Element => {
   }
 
   const validateUserId = () => {
+    if (userIds.length === 0) return false
     for (let i = 0; i < userIds.length; i++) {
       if (userIds[i] === '') {
         return false
       }
     }
-
     return true
   }
 
   const handleCreateNewChat = async () => {
-    if (!validateUserId()) return
+    if (!validateUserId()) {
+      setStatus('failed')
+      setError('User ID must be filled')
+      return
+    }
 
     let chatTitle = ''
     let response
@@ -86,31 +109,81 @@ const HomePage = (): JSX.Element => {
         title: chatTitle
       })
     } catch (error) {}
+
+    setIsOpen(false)
+    setStatus('success')
+  }
+
+  const fetchConversation = (conversationId: string) => {
+    apiGet(`http://localhost:8000/api/v1/chats/get/${conversationId}`).then((response) =>
+      setConversation(response)
+    )
+  }
+
+  const resetConversation = () => {
+    setConversation(null)
+  }
+
+  const handleInputChange = (e) => {
+    setText(e.target.value)
+  }
+
+  const handleSubmitChat = async () => {
+    const response = await apiPost('http://127.0.0.1:5000/classify', { text: text })
+
+    setStatus('')
+    if (response.category === 'Not hateful') {
+      await apiPost('http://localhost:8000/api/v1/chats/message', {
+        conversationId: conversation?.id,
+        senderId: user!.id,
+        content: text,
+        contentType: 'Text'
+      })
+      setStatus('success')
+      setText('')
+      fetchConversation(conversation!.id)
+      await triggerFirebase()
+    } else if (response.category === 'Hateful') {
+      setStatus('failed')
+      setError('No Toxic!')
+    }
   }
 
   return (
     <div className="bg-gray-700 h-screen flex w-full">
       <div className="bg-gray-900 w-[7%]">
         <div className="p-5 flex flex-col gap-5 mt-5">
-          <img src={DummyPP} alt="serverPic" className="rounded-full" />
+          <img
+            src={DummyPP}
+            alt="serverPic"
+            className="rounded-full"
+            onClick={() => resetConversation()}
+          />
           <hr className="h-[3px] bg-gray-700 outline-none border-none rounded-xl" />
           <button className="btn" onClick={() => setIsOpen((prev) => !prev)}>
             +
           </button>
+          <div>
+            {conversations.map((conversation, idx) => (
+              <div key={idx}>
+                <button onClick={() => fetchConversation(conversation.id)}>
+                  <img src={DummyPP} alt="serverPic" className="rounded-full" />
+                </button>
+              </div>
+            ))}
+          </div>
           {isOpen && (
             <dialog className="modal" open>
               <div className="modal-box bg-gray-800">
-                <h3 className="font-bold text-xl text-white">Create new chat!</h3>
+                <h3 className="font-bold text-xl text-white">Create New Chat!</h3>
                 <InputForm
-                  label="User Count"
+                  label=""
                   type="text"
                   value={quantity}
-                  placeholder="User Count"
+                  placeholder="User Count (max: 5)"
                   onChange={handleChangeQuantity}
                 />
-
                 {renderUserInputs()}
-
                 <div className="modal-action">
                   <button className="btn" onClick={handleCreateNewChat}>
                     Create
@@ -124,47 +197,45 @@ const HomePage = (): JSX.Element => {
           )}
         </div>
       </div>
-      <div className="bg-gray-800 w-1/5">
-        <h1 className="text-gray-400 font-semibold px-5 pt-5 mb-5 text-sm mt-2">DIRECT MESSAGES</h1>
-        <hr className="h-[3px] bg-gray-900 outline-none border-none" />
-        <div className="flex flex-col gap-4 p-5">
-          {userList &&
-            userList.map((user, index) => (
-              <div key={index} className="flex gap-3 items-center hover:bg-gray-700 rounded-2xl">
-                <img src={DummyPP} alt="profilePic" className="w-[2.5rem] rounded-full" />
-                <p className="text-white font-semibold text-sm">{user.username}</p>
-              </div>
-            ))}
-        </div>
-      </div>
       <div className="bg-gray-700 flex flex-col justify-between w-full p-5 gap-5">
         <div className="flex gap-3 items-center mb-2">
           <img src={DummyPP} alt="profilePic" className="rounded-full w-[3rem]" />
-          <p className="text-white">Adrian</p>
+          <p className="text-white">{conversation?.title}</p>
         </div>
         <div className="flex flex-col gap-8 overflow-hidden">
           <div className="overflow-auto">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(() => (
-              <>
-                <div className="chat chat-start">
-                  <div className="chat-bubble">Its over Anakin, I have the high ground.</div>
+            {conversation &&
+              conversation.messages.length > 0 &&
+              conversation.messages.map((message, index) => (
+                <div key={index}>
+                  <ChatBubble message={message} userId={user!.id} />
                 </div>
-                <div className="chat chat-end">
-                  <div className="chat-bubble">You underestimate my power!</div>
-                </div>
-              </>
-            ))}
+              ))}
           </div>
           <div className="flex items-center bg-gray-500 rounded-lg py-3 px-4 gap-5">
             <input
               type="text"
               className="bg-gray-500 w-full rounded-lg text-white text-lg outline-none"
+              value={text}
+              onChange={handleInputChange}
             />
-            <button type="button">
+            <button type="button" onClick={handleSubmitChat}>
               <img src={Arrow} alt="" width={15} />
             </button>
           </div>
         </div>
+      </div>
+      <div className="toast toast-top toast-end">
+        {status && status === 'success' && (
+          <div className="alert alert-success">
+            <span className="text-white">Successfully create conversation.</span>
+          </div>
+        )}
+        {status && status === 'failed' && (
+          <div className="alert alert-error">
+            <span className="text-white">{error}</span>
+          </div>
+        )}
       </div>
     </div>
   )

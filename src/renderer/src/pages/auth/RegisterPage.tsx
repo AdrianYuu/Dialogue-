@@ -2,7 +2,6 @@ import InputForm from '@renderer/components/InputForm'
 import { FormEvent, useEffect, useState } from 'react'
 import Button from '../../components/Button'
 import { Link, useNavigate } from 'react-router-dom'
-import { IUser } from '@renderer/interfaces/UserInterface'
 import { apiPost } from '@renderer/api/ApiService'
 
 const RegisterPage = (): JSX.Element => {
@@ -68,14 +67,14 @@ const RegisterPage = (): JSX.Element => {
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-discord">
-      <div className="w-[35rem] h-[50rem] bg-gray-700 rounded-3xl">
+      <div className="w-[35rem] h-[48rem] bg-gray-700 rounded-3xl">
         <form className="flex flex-col p-[2rem]" onSubmit={handleSubmit}>
-          <h1 className="font-semibold text-white text-3xl text-center mt-[2rem] mb-[2rem]">
+          <h1 className="font-semibold text-white text-3xl text-center mt-[1rem] mb-[2rem]">
             Create an Account
           </h1>
           <div className="flex flex-col gap-4 mb-[7rem]">
             <InputForm
-              label="Name"
+              label="Email"
               type="text"
               value={email}
               placeholder="Email"
