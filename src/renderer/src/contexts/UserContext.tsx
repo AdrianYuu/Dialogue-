@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from '@renderer/api/ApiService'
+import { apiGet } from '@renderer/api/ApiService'
 import { IChildren } from '@renderer/interfaces/ChildrenInterface'
 import { IUser } from '@renderer/interfaces/UserInterface'
 import { createContext, useContext, useState } from 'react'
@@ -6,6 +6,7 @@ import { createContext, useContext, useState } from 'react'
 interface IUserContext {
   user: IUser | null
   login: (email: string, password: string) => Promise<boolean>
+  logout: () => void
 }
 
 const userContext = createContext<IUserContext>({} as IUserContext)
@@ -51,7 +52,12 @@ export function UserProvider({ children }: IChildren): JSX.Element {
     return true
   }
 
-  const data = { user, login }
+  function logout() {
+    setUser(null)
+    localStorage.removeItem(USER_KEY)
+  }
+
+  const data = { user, login, logout }
 
   return <userContext.Provider value={data}>{children}</userContext.Provider>
 }

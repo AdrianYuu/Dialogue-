@@ -10,10 +10,12 @@ const ChatBubble = ({ message, userId }: IChatBubble): JSX.Element => {
     <div>
       {message.senderId === userId ? (
         <div className="chat chat-end">
+          <p className="text-white mb-1">{message.sender.username}</p>
           <div className="chat-bubble">{message.content}</div>
         </div>
       ) : (
-        <div className="chat chat-start">
+        <div className="chat chat-start flex flex-col">
+          <p className="text-white mb-1">{message.sender.username}</p>
           <div className="chat-bubble">{message.content}</div>
         </div>
       )}

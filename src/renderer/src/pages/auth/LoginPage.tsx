@@ -7,6 +7,7 @@ import useUser from '@renderer/contexts/UserContext'
 const LoginPage = (): JSX.Element => {
   const navigate = useNavigate()
   const { login } = useUser()
+
   const [email, setEmail] = useState<string>('')
   const [password, setPassword] = useState<string>('')
   const [status, setStatus] = useState<string>('')
