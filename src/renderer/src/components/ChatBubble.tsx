@@ -8,7 +8,7 @@ interface IChatBubble {
 const ChatBubble = ({ message, userId }: IChatBubble): JSX.Element => {
   return (
     <div>
-      {message.senderId === userId ? (
+      {message.sender_id === userId ? (
         <div className="chat chat-end">
           <p className="text-white mb-1">{message.sender.username}</p>
           <div className="chat-bubble">{message.content}</div>

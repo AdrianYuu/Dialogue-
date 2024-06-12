@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react'
 import DummyPP from '@renderer/assets/images/dummypp.png'
 import Arrow from '@renderer/assets/images/arrow.png'
 import InputForm from '@renderer/components/InputForm'
-import { apiGet, apiPost, triggerFirebase } from '@renderer/api/ApiService'
+import { apiGet, apiGetWithUserIdHeader, apiPost, apiPostWithUserIdHeader } from '@renderer/api/ApiService'
 import useUser from '@renderer/contexts/UserContext'
 import { IConversation } from '@renderer/interfaces/ConversationInterface'
 import ChatBubble from './../components/ChatBubble'
-import { collection, onSnapshot, query } from 'firebase/firestore'
-import { db } from '@renderer/firebase'
 import { useNavigate } from 'react-router-dom'
+import { IMessage, MessagePayload } from '@renderer/interfaces/MessageInterface'
 
 const HomePage = (): JSX.Element => {
   const { user, logout } = useUser()
@@ -18,26 +17,38 @@ const HomePage = (): JSX.Element => {
   const [status, setStatus] = useState<string>('')
   const [error, setError] = useState<string>('')
   const [conversations, setConversations] = useState<IConversation[]>([])
-  const [conversation, setConversation] = useState<IConversation | null>()
+  const [conversation, setConversation] = useState<IConversation | null>(null)
+  const [messages, setMessages] = useState<IMessage[]>([])
   const [text, setText] = useState<string>('')
   const [isOpen, setIsOpen] = useState<boolean>(false)
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(query(collection(db, 'chat')), () => {
-      fetchConversation(conversation!.id)
-    })
-
-    return () => {
-      unsubscribe()
-    }
-  }, [conversation?.id])
-
-  useEffect(() => {
     const getData = async () => {
-      setConversations(await apiGet(`http://localhost:8000/api/v1/chats/getForUser/${user!.id}`))
+      const res = await apiGetWithUserIdHeader(`http://localhost:8000/api/v1/chats/getForUser`, user!.id);
+      console.log(res);
+
+      setConversations(res)
     }
     getData()
-  }, [])
+  }, [user])
+
+  useEffect(() => {
+    const ws = new WebSocket(`ws://localhost:8000/api/v1/chats/ws/${conversation?.id}`);
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      console.log('Received message:', message);
+      setMessages((prevMessages) => [...prevMessages, message]);
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [conversation])
 
   const handleChangeQuantity = (quantity: string) => {
     setQuantity(quantity)
@@ -103,7 +114,9 @@ const HomePage = (): JSX.Element => {
     for (let i = 0; i < temp.length; i++) {
       try {
         response = await apiGet(`http://localhost:8000/api/v1/users/get/${temp[i]}`)
-      } catch (error) {}
+      } catch (error) {
+        console.log(error)
+      }
 
       if (i != temp.length - 1) {
         chatTitle += response.username + ', '
@@ -113,11 +126,13 @@ const HomePage = (): JSX.Element => {
     }
 
     try {
-      response = await apiPost('http://localhost:8000/api/v1/chats/create', {
+      response = await apiPostWithUserIdHeader('http://localhost:8000/api/v1/chats/create', {
         memberIds: temp,
         title: chatTitle
-      })
-    } catch (error) {}
+      }, currentUserID)
+    } catch (error) {
+      console.log(error)
+    }
 
     setIsOpen(false)
     setStatus('success')
@@ -125,10 +140,13 @@ const HomePage = (): JSX.Element => {
 
   const fetchConversation = (conversationId: string) => {
     try {
-      apiGet(`http://localhost:8000/api/v1/chats/get/${conversationId}`).then((response) =>
+      apiGet(`http://localhost:8000/api/v1/chats/get/${conversationId}`).then((response) => {
+        console.log(response);
         setConversation(response)
-      )
-    } catch (error) {}
+        // append 
+        setMessages(response.messages)
+      })
+    } catch (error) { }
   }
 
   const resetConversation = () => {
@@ -142,23 +160,28 @@ const HomePage = (): JSX.Element => {
   const handleSubmitChat = async () => {
     resetData()
 
-    let response
-
+    let response = { category: 'Not hateful' }
     try {
       response = await apiPost('http://127.0.0.1:5000/classify', { text: text })
-    } catch (error) {}
+    } catch (error) { }
 
     if (response.category === 'Not hateful') {
-      await apiPost('http://localhost:8000/api/v1/chats/message', {
-        conversationId: conversation?.id,
-        senderId: user!.id,
-        content: text,
-        contentType: 'Text'
-      })
+      const payload: MessagePayload = {
+        SenderID: user!.id,
+        ConversationID: conversation!.id,
+        Content: text,
+        ContentType: "TEXT"
+      };
+
+      try {
+        await apiPost('http://localhost:8000/api/v1/chats/message', payload)
+      } catch (error) {
+        console.log(error)
+      }
+
       setStatus('success')
       setText('')
       fetchConversation(conversation!.id)
-      await triggerFirebase()
     } else if (response.category === 'Hateful') {
       setStatus('failed')
       setError('Please enter good words!')
@@ -232,14 +255,13 @@ const HomePage = (): JSX.Element => {
             </div>
             <div className="flex flex-col gap-8 overflow-hidden p-5">
               <div className="overflow-auto">
-                {conversation &&
-                  conversation.messages.length > 0 &&
-                  conversation.messages.map((message, index) => (
-                    <div key={index} className="mb-2">
-                      <ChatBubble message={message} userId={user!.id} />
-                    </div>
-                  ))}
+                {messages.map((message, index) => (
+                  <div key={index} className="mb-2">
+                    <ChatBubble message={message} userId={user!.id} />
+                  </div>
+                ))}
               </div>
+
               <div className="flex items-center bg-gray-500 rounded-lg py-3 px-4 gap-5">
                 <input
                   type="text"
