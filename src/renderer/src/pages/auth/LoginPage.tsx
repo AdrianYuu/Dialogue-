@@ -18,8 +18,12 @@ const LoginPage = (): JSX.Element => {
     setError('')
   }
 
+  const isFormEmpty = (): boolean => {
+    return email === '' || password === ''
+  }
+
   const validateFormData = (): boolean => {
-    if (email === '' || password === '') {
+    if (isFormEmpty()) {
       setStatus('failed')
       setError('All field is required to be filled.')
       return false
@@ -34,7 +38,8 @@ const LoginPage = (): JSX.Element => {
 
     if (!validateFormData()) return
 
-    if (!(await login(email, password))) {
+    const isLoginSuccess = await login(email, password)
+    if (!isLoginSuccess) {
       setStatus('failed')
       setError('Login failed.')
       return
@@ -43,7 +48,7 @@ const LoginPage = (): JSX.Element => {
     setStatus('success')
     setTimeout(() => {
       navigate('/')
-    }, 1000)
+    }, 500)
   }
 
   useEffect(() => {
