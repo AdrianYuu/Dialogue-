@@ -135,20 +135,30 @@ const HomePage = (): JSX.Element => {
   }, [user]);
 
   useEffect(() => {
-    if (conversation?.id) {
-      const ws = new WebSocket(`ws://localhost:8000/api/v1/chats/ws/${conversation.id}`);
-      ws.onmessage = (event) => {
-        const message = JSON.parse(event.data);
-        setMessages((prevMessages) => [...prevMessages, message]);
-      };
-      ws.onclose = () => {
-        console.log('WebSocket connection closed');
-      };
-      return () => {
-        ws.close();
-      };
+    if (!conversation) {
+      return;
     }
+
+    const ws = new WebSocket(`ws://localhost:8000/api/v1/chats/ws/${conversation.id}`);
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      setMessages((prevMessages) => [...prevMessages, message]);
+    };
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+    };
+    return () => {
+      ws.close();
+    };
   }, [conversation]);
+
+  useEffect(() => {
+    if (notification) {
+      setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+    }
+  }, [notification])
 
   return (
     <div className="bg-gray-700 h-screen flex w-full">
