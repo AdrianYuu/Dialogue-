@@ -20,18 +20,18 @@ const RegisterPage = (): JSX.Element => {
     setError('')
   }
 
+  const isFormEmpty = (): boolean => {
+    return email === '' || password === '' || confirmPassword === '' || username === '' || displayName === ''
+  }
+
   const validateFormData = (): boolean => {
-    if (
-      email === '' ||
-      password === '' ||
-      confirmPassword === '' ||
-      username === '' ||
-      displayName === ''
-    ) {
+    if (isFormEmpty()) {
       setStatus('failed')
       setError('All field is required to be filled.')
       return false
-    } else if (password !== confirmPassword) {
+    }
+
+    if (password !== confirmPassword) {
       setStatus('failed')
       setError('Password and confirm password must be the same.')
       return false
@@ -47,18 +47,24 @@ const RegisterPage = (): JSX.Element => {
     if (!validateFormData()) return
 
     try {
-      await apiPost('http://localhost:8000/api/v1/users/create', {
+      const payload = {
         email: email,
         password: password,
         username: username,
         displayName: displayName
-      })
-    } catch (error) {}
+      };
+
+      await apiPost('http://localhost:8000/api/v1/users/create', payload)
+    } catch (error) { 
+      setStatus('failed')
+      setError('Register failed.')
+      return
+    }
 
     setStatus('success')
     setTimeout(() => {
       navigate('/auth/login')
-    }, 1000)
+    }, 500)
   }
 
   useEffect(() => {
