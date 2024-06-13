@@ -3,57 +3,64 @@ import { FormEvent, useEffect, useState } from 'react'
 import Button from '../../components/Button'
 import { Link, useNavigate } from 'react-router-dom'
 import useUser from '@renderer/contexts/UserContext'
+import NotificationComponent from '@renderer/components/notification'
+import { INotification, NotificationStatus } from '@renderer/interfaces/NotificationInterface'
 
 const LoginPage = (): JSX.Element => {
-  const navigate = useNavigate()
-  const { login } = useUser()
+  const navigate = useNavigate();
+  const { login } = useUser();
 
-  const [email, setEmail] = useState<string>('')
-  const [password, setPassword] = useState<string>('')
-  const [status, setStatus] = useState<string>('')
-  const [error, setError] = useState<string>('')
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [notification, setNotification] = useState<INotification | null>(null);
 
-  const resetData = (): void => {
-    setStatus('')
-    setError('')
-  }
+  const handlePostNotification = (status: NotificationStatus, message: string): void => {
+    const notification: INotification = {
+      status,
+      message
+    }
+    setNotification(notification);
+  };
 
   const isFormEmpty = (): boolean => {
-    return email === '' || password === ''
-  }
+    return email === '' || password === '';
+  };
 
   const validateFormData = (): boolean => {
     if (isFormEmpty()) {
-      setStatus('failed')
-      setError('All field is required to be filled.')
-      return false
+      handlePostNotification(NotificationStatus.FAILED, 'Please fill all the fields.');
+      return false;
     }
 
-    return true
-  }
+    return true;
+  };
 
   const handleSubmit = async (e: FormEvent): Promise<void> => {
-    e.preventDefault()
-    resetData()
+    e.preventDefault();
 
-    if (!validateFormData()) return
+    if (!validateFormData())
+      return;
 
-    const isLoginSuccess = await login(email, password)
+    const isLoginSuccess = await login(email, password);
     if (!isLoginSuccess) {
-      setStatus('failed')
-      setError('Login failed.')
-      return
+      handlePostNotification(NotificationStatus.FAILED, 'Invalid credentials.');
+      return;
     }
 
-    setStatus('success')
+    handlePostNotification(NotificationStatus.SUCCESS, 'Login successful.');
     setTimeout(() => {
-      navigate('/')
-    }, 500)
-  }
+      navigate('/');
+    }, 500);
+  };
 
   useEffect(() => {
-    resetData()
-  }, [])
+    if (notification) {
+      setTimeout(() => {
+        setNotification(null)
+      }, 5000)
+    };
+
+  }, [notification]);
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-discord">
@@ -89,18 +96,8 @@ const LoginPage = (): JSX.Element => {
           </div>
         </form>
       </div>
-      <div className="toast toast-end">
-        {status && status === 'success' && (
-          <div className="alert alert-success">
-            <span className="text-white">Successfully login.</span>
-          </div>
-        )}
-        {status && status === 'failed' && (
-          <div className="alert alert-error">
-            <span className="text-white">{error}</span>
-          </div>
-        )}
-      </div>
+
+      <NotificationComponent notification={notification} />
     </div>
   )
 }
