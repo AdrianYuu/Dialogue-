@@ -10,61 +10,38 @@ import { useNavigate } from 'react-router-dom'
 import { IMessage, MessagePayload } from '@renderer/interfaces/MessageInterface'
 
 const HomePage = (): JSX.Element => {
-  const { user, logout } = useUser()
-  const navigate = useNavigate()
-  const [quantity, setQuantity] = useState<string>('')
-  const [userIds, setUserIds] = useState<string[]>([])
-  const [status, setStatus] = useState<string>('')
-  const [error, setError] = useState<string>('')
-  const [conversations, setConversations] = useState<IConversation[]>([])
-  const [conversation, setConversation] = useState<IConversation | null>(null)
-  const [messages, setMessages] = useState<IMessage[]>([])
-  const [text, setText] = useState<string>('')
-  const [isOpen, setIsOpen] = useState<boolean>(false)
+  const { user, logout } = useUser();
+  const navigate = useNavigate();
+  const [quantity, setQuantity] = useState<string>('');
+  const [userIds, setUserIds] = useState<string[]>([]);
+  const [conversations, setConversations] = useState<IConversation[]>([]);
+  const [conversation, setConversation] = useState<IConversation | null>(null);
+  const [messages, setMessages] = useState<IMessage[]>([]);
+  const [text, setText] = useState<string>('');
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [notification, setNotification] = useState<{ status: string, message: string } | null>(null);
 
-  useEffect(() => {
-    const getData = async () => {
-      const res = await apiGetWithUserIdHeader(`http://localhost:8000/api/v1/chats/getForUser`, user!.id);
-      console.log(res);
+  const isQuantityValid = (quantity: string) => {
+    const newQuantity = parseInt(quantity, 10);
+    return !isNaN(newQuantity) && newQuantity > 0 && newQuantity <= 5;
+  }
 
-      setConversations(res)
-    }
-    getData()
-  }, [user])
+  const handleQuantityChange = (quantity: string) => {
+    setQuantity(quantity);
 
-  useEffect(() => {
-    const ws = new WebSocket(`ws://localhost:8000/api/v1/chats/ws/${conversation?.id}`);
-
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      console.log('Received message:', message);
-      setMessages((prevMessages) => [...prevMessages, message]);
-    };
-
-    ws.onclose = () => {
-      console.log('WebSocket connection closed');
-    };
-
-    return () => {
-      ws.close();
-    };
-  }, [conversation])
-
-  const handleChangeQuantity = (quantity: string) => {
-    setQuantity(quantity)
-    const newQuantity = parseInt(quantity, 10)
-    if (!isNaN(newQuantity) && newQuantity > 0 && newQuantity < 6) {
-      setUserIds(Array(newQuantity).fill(''))
+    if (!isQuantityValid(quantity)) {
+      const newQuantity = parseInt(quantity, 10);
+      setUserIds(Array(newQuantity).fill(''));
     } else {
-      setUserIds([])
+      setUserIds([]);
     }
-  }
+  };
 
-  const handleChangeUserId = (index: number, value: string) => {
-    const newUserIds = [...userIds]
-    newUserIds[index] = value
-    setUserIds(newUserIds)
-  }
+  const handleUserIdChange = (index: number, value: string) => {
+    const newUserIds = [...userIds];
+    newUserIds[index] = value;
+    setUserIds(newUserIds);
+  };
 
   const renderUserInputs = () => {
     return userIds.map((userId, index) => (
@@ -74,124 +51,118 @@ const HomePage = (): JSX.Element => {
           type="text"
           value={userId}
           placeholder="Enter User ID..."
-          onChange={(e) => handleChangeUserId(index, e)}
+          onChange={(value) => handleUserIdChange(index, value)}
         />
       </div>
-    ))
-  }
+    ));
+  };
 
-  const validateUserId = () => {
-    if (userIds.length === 0) return false
-    for (let i = 0; i < userIds.length; i++) {
-      if (userIds[i] === '') {
-        return false
-      }
-    }
-    return true
-  }
-
-  const resetData = (): void => {
-    setStatus('')
-    setError('')
-  }
+  const validateUserIds = (): boolean => {
+    return userIds.length > 0 && userIds.every((id) => id.trim() !== '');
+  };
 
   const handleCreateNewChat = async () => {
-    resetData()
-
-    if (!validateUserId()) {
-      setStatus('failed')
-      setError('User ID must be filled')
-      return
+    if (!validateUserIds()) {
+      setNotification({ status: 'failed', message: 'User ID must be filled' });
+      return;
     }
 
-    let chatTitle = ''
-    let response
+    let chatTitle = '';
+    const memberIds = [...userIds, user!.id];
 
-    const currentUserID = user!.id
-    let temp = userIds
-    temp = [...temp, currentUserID]
-
-    for (let i = 0; i < temp.length; i++) {
+    for (let i = 0; i < memberIds.length; i++) {
       try {
-        response = await apiGet(`http://localhost:8000/api/v1/users/get/${temp[i]}`)
+        const response = await apiGet(`http://localhost:8000/api/v1/users/get/${memberIds[i]}`);
+        chatTitle += response.username + (i < memberIds.length - 1 ? ', ' : '');
       } catch (error) {
-        console.log(error)
-      }
-
-      if (i != temp.length - 1) {
-        chatTitle += response.username + ', '
-      } else {
-        chatTitle += response.username
+        console.error('Failed to fetch user', error);
       }
     }
 
     try {
-      response = await apiPostWithUserIdHeader('http://localhost:8000/api/v1/chats/create', {
-        memberIds: temp,
+      await apiPostWithUserIdHeader('http://localhost:8000/api/v1/chats/create', {
+        memberIds,
         title: chatTitle
-      }, currentUserID)
+      }, user!.id);
+      setIsOpen(false);
+      setNotification({ status: 'success', message: 'Successfully created conversation' });
     } catch (error) {
-      console.log(error)
+      console.error('Failed to create chat', error);
+      setNotification({ status: 'failed', message: 'Failed to create chat' });
     }
+  };
 
-    setIsOpen(false)
-    setStatus('success')
-  }
-
-  const fetchConversation = (conversationId: string) => {
+  const fetchConversation = async (conversationId: string) => {
     try {
-      apiGet(`http://localhost:8000/api/v1/chats/get/${conversationId}`).then((response) => {
-        console.log(response);
-        setConversation(response)
-        // append 
-        setMessages(response.messages)
-      })
-    } catch (error) { }
-  }
+      const response = await apiGet(`http://localhost:8000/api/v1/chats/get/${conversationId}`);
+      setConversation(response);
+      setMessages(response.messages);
+    } catch (error) {
+      console.error('Failed to fetch conversation', error);
+    }
+  };
 
-  const resetConversation = () => {
-    setConversation(null)
-  }
-
-  const handleInputChange = (e) => {
-    setText(e.target.value)
-  }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setText(e.target.value);
+  };
 
   const handleSubmitChat = async () => {
-    resetData()
-
-    let response = { category: 'Not hateful' }
     try {
-      response = await apiPost('http://127.0.0.1:5000/classify', { text: text })
-    } catch (error) { }
-
-    if (response.category === 'Not hateful') {
-      const payload: MessagePayload = {
-        SenderID: user!.id,
-        ConversationID: conversation!.id,
-        Content: text,
-        ContentType: "TEXT"
-      };
-
-      try {
-        await apiPost('http://localhost:8000/api/v1/chats/message', payload)
-      } catch (error) {
-        console.log(error)
+      const response = await apiPost('http://127.0.0.1:5000/classify', { text });
+      if (response.category === 'Not hateful') {
+        const payload: MessagePayload = {
+          SenderID: user!.id,
+          ConversationID: conversation!.id,
+          Content: text,
+          ContentType: "TEXT"
+        };
+        await apiPost('http://localhost:8000/api/v1/chats/message', payload);
+        setText('');
+        await fetchConversation(conversation!.id);
+        setNotification({ status: 'success', message: 'Message sent' });
+      } else {
+        setNotification({ status: 'failed', message: 'Please enter good words!' });
       }
-
-      setStatus('success')
-      setText('')
-      fetchConversation(conversation!.id)
-    } else if (response.category === 'Hateful') {
-      setStatus('failed')
-      setError('Please enter good words!')
+    } catch (error) {
+      console.error('Failed to send message', error);
+      setNotification({ status: 'failed', message: 'Failed to send message' });
     }
-  }
+  };
 
   const handleLogout = () => {
-    logout()
-    navigate('/auth/login')
-  }
+    logout();
+    navigate('/auth/login');
+  };
+
+  useEffect(() => {
+    const fetchConversations = async () => {
+      try {
+        const res = await apiGetWithUserIdHeader(`http://localhost:8000/api/v1/chats/getForUser`, user!.id);
+        setConversations(res);
+      } catch (error) {
+        console.error('Failed to fetch conversations', error);
+      }
+    };
+    if (user) {
+      fetchConversations();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (conversation?.id) {
+      const ws = new WebSocket(`ws://localhost:8000/api/v1/chats/ws/${conversation.id}`);
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        setMessages((prevMessages) => [...prevMessages, message]);
+      };
+      ws.onclose = () => {
+        console.log('WebSocket connection closed');
+      };
+      return () => {
+        ws.close();
+      };
+    }
+  }, [conversation]);
 
   return (
     <div className="bg-gray-700 h-screen flex w-full">
@@ -201,7 +172,7 @@ const HomePage = (): JSX.Element => {
             src={DummyPP}
             alt="serverPic"
             className="rounded-full"
-            onClick={() => resetConversation()}
+            onClick={() => setConversation(null)}
           />
           <hr className="h-[3px] bg-gray-700 outline-none border-none rounded-xl" />
           <button className="btn" onClick={() => setIsOpen((prev) => !prev)}>
@@ -230,7 +201,7 @@ const HomePage = (): JSX.Element => {
                   type="text"
                   value={quantity}
                   placeholder="User Count (max: 5)"
-                  onChange={handleChangeQuantity}
+                  onChange={(value) => handleQuantityChange(value)}
                 />
                 {renderUserInputs()}
                 <div className="modal-action">
@@ -251,7 +222,7 @@ const HomePage = (): JSX.Element => {
           <>
             <div className="flex gap-3 items-center mb-2 bg-gray-600 p-5">
               <img src={DummyPP} alt="profilePic" className="rounded-full w-[3rem]" />
-              <p className="text-white">{conversation?.title}</p>
+              <p className="text-white">{conversation.title}</p>
             </div>
             <div className="flex flex-col gap-8 overflow-hidden p-5">
               <div className="overflow-auto">
@@ -261,7 +232,6 @@ const HomePage = (): JSX.Element => {
                   </div>
                 ))}
               </div>
-
               <div className="flex items-center bg-gray-500 rounded-lg py-3 px-4 gap-5">
                 <input
                   type="text"
@@ -277,20 +247,13 @@ const HomePage = (): JSX.Element => {
           </>
         )}
       </div>
-      <div className="toast toast-top toast-end">
-        {status && status === 'success' && (
-          <div className="alert alert-success">
-            <span className="text-white">Successfully create conversation.</span>
-          </div>
-        )}
-        {status && status === 'failed' && (
-          <div className="alert alert-error">
-            <span className="text-white">{error}</span>
-          </div>
-        )}
-      </div>
+      {notification && (
+        <div className={`toast toast-top toast-end ${notification.status === 'success' ? 'alert alert-success' : 'alert alert-error'}`}>
+          <span className="text-white">{notification.message}</span>
+        </div>
+      )}
     </div>
-  )
-}
+  );
+};
 
 export default HomePage
