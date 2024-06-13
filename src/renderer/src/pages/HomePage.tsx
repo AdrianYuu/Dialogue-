@@ -29,7 +29,12 @@ const HomePage = (): JSX.Element => {
   };
 
   const validateUserIds = (userIds: string[]): boolean => {
-    return userIds.length > 0 && userIds.every((id) => id.trim() !== '');
+    const userIdsValid = userIds.length > 0 && userIds.every((id) => id.trim() !== '');
+    if (!userIdsValid) {
+      handlePostNotification(NotificationStatus.FAILED, 'Please enter valid user IDs');
+    }
+
+    return userIdsValid;
   };
 
   const generateChatTitle = async (userIds: string[]): Promise<string> => {
@@ -50,14 +55,13 @@ const HomePage = (): JSX.Element => {
 
   const handleCreateNewChat = async (userIds: string[]) => {
     if (!validateUserIds(userIds)) {
-      handlePostNotification(NotificationStatus.FAILED, 'Please enter valid user IDs');
       return;
     }
 
     try {
       const chatTitle = await generateChatTitle(userIds);
       const payload = {
-        memberIds: [...userIds, user!.id],
+        memberIds: [...userIds],
         title: chatTitle
       };
 
@@ -90,11 +94,25 @@ const HomePage = (): JSX.Element => {
     setMessages([]);
   };
 
-  const handleSubmitChat = async () => {
+  const validateChatProfaity = async (text: string): Promise<boolean> => {
     try {
       const response = await apiPost('http://127.0.0.1:5000/classify', { text });
-      if (response.catch !== 'Not hateful') {
-        handlePostNotification(NotificationStatus.FAILED, 'Hateful messages are not allowed');
+      const isProfane = response.catch === 'Hateful';
+      if (isProfane) {
+        handlePostNotification(NotificationStatus.FAILED, 'Chat contains profanity');
+      }
+      
+      return response.catch === 'Not hateful';
+    } catch (error) {
+      handlePostNotification(NotificationStatus.FAILED, 'Failed to validate chat');
+      return false;
+    }
+  }
+
+  const handleSubmitChat = async () => {
+    try {
+      const isProfane = await validateChatProfaity(text);
+      if (!isProfane) {
         return;
       }
 
