@@ -8,6 +8,7 @@ import { IConversation } from '@renderer/interfaces/ConversationInterface'
 import ChatBubble from './../components/ChatBubble'
 import { useNavigate } from 'react-router-dom'
 import { IMessage, MessagePayload } from '@renderer/interfaces/MessageInterface'
+import { INotification, NotificationStatus } from '@renderer/interfaces/NotificationInterface'
 
 const HomePage = (): JSX.Element => {
   const { user, logout } = useUser();
@@ -19,7 +20,15 @@ const HomePage = (): JSX.Element => {
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [text, setText] = useState<string>('');
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [notification, setNotification] = useState<{ status: string, message: string } | null>(null);
+  const [notification, setNotification] = useState<INotification | null>(null);
+
+  const handlePostNotification = (status: NotificationStatus, message: string) => {
+    const notification: INotification = {
+      status,
+      message
+    };
+    setNotification(notification);
+  };
 
   const isQuantityValid = (quantity: string) => {
     const newQuantity = parseInt(quantity, 10);
@@ -63,7 +72,7 @@ const HomePage = (): JSX.Element => {
 
   const handleCreateNewChat = async () => {
     if (!validateUserIds()) {
-      setNotification({ status: 'failed', message: 'User ID must be filled' });
+      handlePostNotification(NotificationStatus.FAILED, 'Please enter valid user IDs');
       return;
     }
 
@@ -85,10 +94,10 @@ const HomePage = (): JSX.Element => {
         title: chatTitle
       }, user!.id);
       setIsOpen(false);
-      setNotification({ status: 'success', message: 'Successfully created conversation' });
+
+      handlePostNotification(NotificationStatus.SUCCESS, 'Successfully created conversation');
     } catch (error) {
-      console.error('Failed to create chat', error);
-      setNotification({ status: 'failed', message: 'Failed to create chat' });
+      handlePostNotification(NotificationStatus.FAILED, 'Failed to create chat');
     }
   };
 
@@ -117,15 +126,16 @@ const HomePage = (): JSX.Element => {
           ContentType: "TEXT"
         };
         await apiPost('http://localhost:8000/api/v1/chats/message', payload);
+
         setText('');
         await fetchConversation(conversation!.id);
-        setNotification({ status: 'success', message: 'Message sent' });
-      } else {
-        setNotification({ status: 'failed', message: 'Please enter good words!' });
+        handlePostNotification(NotificationStatus.SUCCESS, 'Successfully sent message');
+        return;
       }
+
+      handlePostNotification(NotificationStatus.FAILED, 'Hateful messages are not allowed');
     } catch (error) {
-      console.error('Failed to send message', error);
-      setNotification({ status: 'failed', message: 'Failed to send message' });
+      handlePostNotification(NotificationStatus.FAILED, 'Failed to send message');
     }
   };
 
@@ -140,9 +150,10 @@ const HomePage = (): JSX.Element => {
         const res = await apiGetWithUserIdHeader(`http://localhost:8000/api/v1/chats/getForUser`, user!.id);
         setConversations(res);
       } catch (error) {
-        console.error('Failed to fetch conversations', error);
+        handlePostNotification(NotificationStatus.FAILED, 'Failed to fetch conversations');
       }
     };
+
     if (user) {
       fetchConversations();
     }
