@@ -3,67 +3,82 @@ import { FormEvent, useEffect, useState } from 'react'
 import Button from '../../components/Button'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiPost } from '@renderer/api/ApiService'
+import { INotification, NotificationStatus } from '@renderer/interfaces/NotificationInterface'
+import NotificationComponent from '@renderer/components/notification'
 
 const RegisterPage = (): JSX.Element => {
-  const navigate = useNavigate()
-  const [email, setEmail] = useState<string>('')
-  const [password, setPassword] = useState<string>('')
-  const [confirmPassword, setConfirmPassword] = useState<string>('')
-  const [username, setUsername] = useState<string>('')
-  const [displayName, setDisplayName] = useState<string>('')
+  const navigate = useNavigate();
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [username, setUsername] = useState<string>('');
+  const [displayName, setDisplayName] = useState<string>('');
+  const [notification, setNotification] = useState<INotification | null>(null);
 
-  const [status, setStatus] = useState<string>('')
-  const [error, setError] = useState<string>('')
+  const handlePostNotification = (status: NotificationStatus, message: string): void => {
+    const notification: INotification = {
+      status,
+      message
+    };
+    setNotification(notification);
+  };
 
-  const resetData = (): void => {
-    setStatus('')
-    setError('')
+  const isFormEmpty = (): boolean => {
+    return email === '' || password === '' || confirmPassword === '' || username === '' || displayName === '';
   }
+
+  const isPasswordMatch = (): boolean => {
+    return password === confirmPassword;
+  };
 
   const validateFormData = (): boolean => {
-    if (
-      email === '' ||
-      password === '' ||
-      confirmPassword === '' ||
-      username === '' ||
-      displayName === ''
-    ) {
-      setStatus('failed')
-      setError('All field is required to be filled.')
-      return false
-    } else if (password !== confirmPassword) {
-      setStatus('failed')
-      setError('Password and confirm password must be the same.')
-      return false
+    if (isFormEmpty()) {
+      handlePostNotification(NotificationStatus.FAILED, 'Please fill all the fields.');
+      return false;
     }
 
-    return true
-  }
+    if (!isPasswordMatch()) {
+      handlePostNotification(NotificationStatus.FAILED, 'Password and Confirm Password must be the same.');
+      return false;
+    }
+
+    return true;
+  };
 
   const handleSubmit = async (e: FormEvent): Promise<void> => {
-    e.preventDefault()
-    resetData()
+    e.preventDefault();
 
-    if (!validateFormData()) return
+    if (!validateFormData())
+      return;
 
     try {
-      await apiPost('http://localhost:8000/api/v1/users/create', {
+      const payload = {
         email: email,
         password: password,
         username: username,
         displayName: displayName
-      })
-    } catch (error) {}
+      };
 
-    setStatus('success')
+      await apiPost('http://localhost:8000/api/v1/users/create', payload);
+    } catch (error) {
+      handlePostNotification(NotificationStatus.FAILED, 'Failed to register.');
+      return;
+    }
+
+    handlePostNotification(NotificationStatus.SUCCESS, 'Register successful.');
     setTimeout(() => {
       navigate('/auth/login')
-    }, 1000)
+    }, 500);
   }
 
   useEffect(() => {
-    resetData()
-  }, [])
+    if (notification) {
+      setTimeout(() => {
+        setNotification(null)
+      }, 5000)
+    };
+
+  }, [notification]);
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-discord">
@@ -120,18 +135,8 @@ const RegisterPage = (): JSX.Element => {
           </div>
         </form>
       </div>
-      <div className="toast toast-end">
-        {status && status === 'success' && (
-          <div className="alert alert-success">
-            <span className="text-white">Successfully register user data.</span>
-          </div>
-        )}
-        {status && status === 'failed' && (
-          <div className="alert alert-error">
-            <span className="text-white">{error}</span>
-          </div>
-        )}
-      </div>
+
+      <NotificationComponent notification={notification} />
     </div>
   )
 }

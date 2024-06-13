@@ -1,7 +1,7 @@
 interface IInputForm {
   label: string
   type: string
-  value: string
+  value: string | number
   placeholder?: string
   onChange: (value: string) => void
   disabled?: boolean
