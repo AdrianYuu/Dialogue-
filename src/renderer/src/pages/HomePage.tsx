@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
-import { apiGet, apiGetWithUserIdHeader, apiPost, apiPostWithUserIdHeader } from '@renderer/api/ApiService'
+import {
+  apiGet,
+  apiGetWithUserIdHeader,
+  apiPost,
+  apiPostWithUserIdHeader
+} from '@renderer/api/ApiService'
 import useUser from '@renderer/contexts/UserContext'
 import { IConversation } from '@renderer/interfaces/ConversationInterface'
 import { useNavigate } from 'react-router-dom'
@@ -11,170 +16,174 @@ import CreateChatModal from '@renderer/components/home/createchatdialog'
 import NotificationComponent from '@renderer/components/notification'
 
 const HomePage = (): JSX.Element => {
-  const { user, logout } = useUser();
-  const navigate = useNavigate();
-  const [conversations, setConversations] = useState<IConversation[]>([]);
-  const [conversation, setConversation] = useState<IConversation | null>(null);
-  const [messages, setMessages] = useState<IMessage[]>([]);
-  const [text, setText] = useState<string>('');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
-  const [notification, setNotification] = useState<INotification | null>(null);
+  const { user, logout } = useUser()
+  const navigate = useNavigate()
+  const [conversations, setConversations] = useState<IConversation[]>([])
+  const [conversation, setConversation] = useState<IConversation | null>(null)
+  const [messages, setMessages] = useState<IMessage[]>([])
+  const [text, setText] = useState<string>('')
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false)
+  const [notification, setNotification] = useState<INotification | null>(null)
 
   const handlePostNotification = (status: NotificationStatus, message: string) => {
     const notification: INotification = {
       status,
       message
-    };
-    setNotification(notification);
-  };
+    }
+    setNotification(notification)
+  }
 
   const validateUserIds = (userIds: string[]): boolean => {
-    const userIdsValid = userIds.length > 0 && userIds.every((id) => id.trim() !== '');
+    const userIdsValid = userIds.length > 0 && userIds.every((id) => id.trim() !== '')
     if (!userIdsValid) {
-      handlePostNotification(NotificationStatus.FAILED, 'Please enter valid user IDs');
+      handlePostNotification(NotificationStatus.FAILED, 'Please enter valid user IDs')
     }
 
-    return userIdsValid;
-  };
+    return userIdsValid
+  }
 
   const generateChatTitle = async (userIds: string[]): Promise<string> => {
-    let chatTitle = '';
-    const memberIds = [...userIds, user!.id];
+    let chatTitle = ''
+    const memberIds = [...userIds, user!.id]
 
     for (let i = 0; i < memberIds.length; i++) {
       try {
-        const response = await apiGet(`http://localhost:8000/api/v1/users/get/${memberIds[i]}`);
-        chatTitle += response.username + (i < memberIds.length - 1 ? ', ' : '');
+        const response = await apiGet(`http://localhost:8000/api/v1/users/get/${memberIds[i]}`)
+        chatTitle += response.username + (i < memberIds.length - 1 ? ', ' : '')
       } catch (error) {
-        console.error('Failed to fetch user', error);
+        console.error('Failed to fetch user', error)
       }
     }
 
-    return chatTitle;
-  };
+    return chatTitle
+  }
 
   const handleCreateNewChat = async (userIds: string[]) => {
     if (!validateUserIds(userIds)) {
-      return;
+      return
     }
 
     try {
-      const chatTitle = await generateChatTitle(userIds);
+      const chatTitle = await generateChatTitle(userIds)
       const payload = {
         memberIds: [...userIds],
         title: chatTitle
-      };
-
-      await apiPostWithUserIdHeader('http://localhost:8000/api/v1/chats/create', payload, user!.id);
-      setIsCreateModalOpen(false);
-
-      handlePostNotification(NotificationStatus.SUCCESS, 'Successfully created conversation');
-    } catch (error) {
-      handlePostNotification(NotificationStatus.FAILED, 'Failed to create chat');
-    }
-  };
-
-  const fetchConversation = async (conversationId: string) => {
-    try {
-      const response = await apiGet(`http://localhost:8000/api/v1/chats/get/${conversationId}`);
-      setConversation(response);
-      setMessages(response.messages);
-    } catch (error) {
-      console.error('Failed to fetch conversation', error);
-    }
-  };
-
-  const handleConversationSelect = async (id: string | null) => {
-    if (id) {
-      await fetchConversation(id);
-      return;
-    }
-
-    setConversation(null);
-    setMessages([]);
-  };
-
-  const validateChatProfaity = async (text: string): Promise<boolean> => {
-    try {
-      const response = await apiPost('http://127.0.0.1:5000/classify', { text });
-      const isProfane = response.catch === 'Hateful';
-      if (isProfane) {
-        handlePostNotification(NotificationStatus.FAILED, 'Chat contains profanity');
       }
-      
-      return response.catch === 'Not hateful';
+
+      await apiPostWithUserIdHeader('http://localhost:8000/api/v1/chats/create', payload, user!.id)
+      setIsCreateModalOpen(false)
+
+      handlePostNotification(NotificationStatus.SUCCESS, 'Successfully created conversation')
     } catch (error) {
-      handlePostNotification(NotificationStatus.FAILED, 'Failed to validate chat');
-      return false;
+      handlePostNotification(NotificationStatus.FAILED, 'Failed to create chat')
     }
   }
 
-  const handleSubmitChat = async () => {
+  const fetchConversation = async (conversationId: string) => {
     try {
-      const isProfane = await validateChatProfaity(text);
+      const response = await apiGet(`http://localhost:8000/api/v1/chats/get/${conversationId}`)
+      setConversation(response)
+      setMessages(response.messages)
+    } catch (error) {
+      console.error('Failed to fetch conversation', error)
+    }
+  }
+
+  const handleConversationSelect = async (id: string | null) => {
+    if (id) {
+      await fetchConversation(id)
+      return
+    }
+
+    setConversation(null)
+    setMessages([])
+  }
+
+  const validateChatProfaity = async (text: string): Promise<boolean> => {
+    try {
+      console.log('text: ', text)
+      const response = await apiPost('http://127.0.0.1:5000/classify', { text })
+      const isProfane = response.category === 'Hateful'
+      if (isProfane) {
+        handlePostNotification(NotificationStatus.FAILED, 'Chat contains profanity')
+      }
+
+      return response.category === 'Not hateful'
+    } catch (error) {
+      handlePostNotification(NotificationStatus.FAILED, 'Failed to validate chat')
+      return false
+    }
+  }
+
+  const handleSubmitChat = async (text: string) => {
+    try {
+      const isProfane = await validateChatProfaity(text)
       if (!isProfane) {
-        return;
+        return
       }
 
       const payload: MessagePayload = {
         SenderID: user!.id,
         ConversationID: conversation!.id,
         Content: text,
-        ContentType: "TEXT"
-      };
-      await apiPost('http://localhost:8000/api/v1/chats/message', payload);
+        ContentType: 'TEXT'
+      }
+      await apiPost('http://localhost:8000/api/v1/chats/message', payload)
 
-      setText('');
-      await fetchConversation(conversation!.id);
-      handlePostNotification(NotificationStatus.SUCCESS, 'Successfully sent message');
+      setText('')
+      await fetchConversation(conversation!.id)
+      handlePostNotification(NotificationStatus.SUCCESS, 'Successfully sent message')
     } catch (error) {
-      handlePostNotification(NotificationStatus.FAILED, 'Failed to send message');
+      handlePostNotification(NotificationStatus.FAILED, 'Failed to send message')
     }
-  };
+  }
 
   const handleLogout = () => {
-    logout();
-    navigate('/auth/login');
-  };
+    logout()
+    navigate('/auth/login')
+  }
 
   useEffect(() => {
     const fetchConversations = async () => {
       try {
-        const res = await apiGetWithUserIdHeader(`http://localhost:8000/api/v1/chats/getForUser`, user!.id);
-        setConversations(res);
+        const res = await apiGetWithUserIdHeader(
+          `http://localhost:8000/api/v1/chats/getForUser`,
+          user!.id
+        )
+        setConversations(res)
       } catch (error) {
-        handlePostNotification(NotificationStatus.FAILED, 'Failed to fetch conversations');
+        handlePostNotification(NotificationStatus.FAILED, 'Failed to fetch conversations')
       }
-    };
+    }
 
     if (user) {
-      fetchConversations();
+      fetchConversations()
     }
-  }, [user]);
+  }, [user])
 
   useEffect(() => {
     if (!conversation) {
-      return;
+      return
     }
 
-    const ws = new WebSocket(`ws://localhost:8000/api/v1/chats/ws/${conversation.id}`);
+    const ws = new WebSocket(`ws://localhost:8000/api/v1/chats/ws/${conversation.id}`)
     ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      setMessages((prevMessages) => [...prevMessages, message]);
-    };
+      const message = JSON.parse(event.data)
+      setMessages((prevMessages) => [...prevMessages, message])
+    }
     ws.onclose = () => {
-      console.log('WebSocket connection closed');
-    };
+      console.log('WebSocket connection closed')
+    }
     return () => {
-      ws.close();
-    };
-  }, [conversation]);
+      ws.close()
+    }
+  }, [conversation])
 
   useEffect(() => {
     if (notification) {
       setTimeout(() => {
-        setNotification(null);
-      }, 5000);
+        setNotification(null)
+      }, 5000)
     }
   }, [notification])
 
@@ -204,7 +213,7 @@ const HomePage = (): JSX.Element => {
 
       <NotificationComponent notification={notification} />
     </div>
-  );
-};
+  )
+}
 
 export default HomePage

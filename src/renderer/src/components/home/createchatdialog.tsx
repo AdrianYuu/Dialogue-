@@ -1,46 +1,56 @@
-import { useState } from "react";
-import InputForm from "../InputForm";
+import { useEffect, useState } from 'react'
+import InputForm from '../InputForm'
 
 interface CreateChatModalProps {
-  isOpen: boolean;
+  isOpen: boolean
 
-  onCreateChat: (userIds: string[]) => void;
-  onCloseModal: () => void;
-};
+  onCreateChat: (userIds: string[]) => void
+  onCloseModal: () => void
+}
 
 const CreateChatModal = (props: CreateChatModalProps) => {
-  const [quantity, setQuantity] = useState<number>(0);
-  const [userIds, setUserIds] = useState<string[]>([]);
+  const [quantity, setQuantity] = useState<number>(0)
+  const [userIds, setUserIds] = useState<string[]>([])
 
+  useEffect(() => {
+    if (quantity > userIds.length) {
+      setUserIds((prevUserIds) => [
+        ...prevUserIds,
+        ...Array(quantity - prevUserIds.length).fill('')
+      ])
+    } else if (quantity < userIds.length) {
+      setUserIds((prevUserIds) => prevUserIds.slice(0, quantity))
+    }
+  }, [quantity])
 
   const isQuantityValid = (quantity: number) => {
-    return !isNaN(quantity) && quantity > 0 && quantity <= 5;
+    return !isNaN(quantity) && quantity > 0 && quantity <= 5
   }
 
   const onQuantityChange = (quantity: number) => {
-    if (isQuantityValid(quantity))
-      setQuantity(quantity);
-  };
+    if (isQuantityValid(quantity)) {
+      setQuantity(quantity)
+    }
+  }
 
   const onUserIdChange = (index: number, value: string) => {
     setUserIds((prevUserIds) => {
-      const newUserIds = [...prevUserIds];
-      newUserIds[index] = value;
-      return newUserIds;
-    });
-  };
+      const newUserIds = [...prevUserIds]
+      newUserIds[index] = value
+      return newUserIds
+    })
+  }
 
   const handleCloseModal = () => {
-    setQuantity(0);
-    setUserIds([]);
-    props.onCloseModal();
-  };
+    setQuantity(0)
+    setUserIds([])
+    props.onCloseModal()
+  }
 
   const handleCreateChat = () => {
-    props.onCreateChat(userIds);
-    handleCloseModal();
-  };
-
+    props.onCreateChat(userIds)
+    handleCloseModal()
+  }
 
   const renderUserInputs = () => {
     return userIds.map((userId, index) => (
@@ -53,8 +63,8 @@ const CreateChatModal = (props: CreateChatModalProps) => {
           onChange={(value) => onUserIdChange(index, value)}
         />
       </div>
-    ));
-  };
+    ))
+  }
 
   return (
     props.isOpen && (
@@ -80,7 +90,7 @@ const CreateChatModal = (props: CreateChatModalProps) => {
         </div>
       </dialog>
     )
-  );
-};
+  )
+}
 
-export default CreateChatModal;
+export default CreateChatModal

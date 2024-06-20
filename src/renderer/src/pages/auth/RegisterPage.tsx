@@ -3,53 +3,61 @@ import { FormEvent, useEffect, useState } from 'react'
 import Button from '../../components/Button'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiPost } from '@renderer/api/ApiService'
-import { INotification, NotificationStatus } from '@renderer/interfaces/NotificationInterface'
+import { INotification, NotificationStatus } from '../../interfaces/NotificationInterface'
 import NotificationComponent from '@renderer/components/notification'
 
 const RegisterPage = (): JSX.Element => {
-  const navigate = useNavigate();
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [confirmPassword, setConfirmPassword] = useState<string>('');
-  const [username, setUsername] = useState<string>('');
-  const [displayName, setDisplayName] = useState<string>('');
-  const [notification, setNotification] = useState<INotification | null>(null);
+  const navigate = useNavigate()
+  const [email, setEmail] = useState<string>('')
+  const [password, setPassword] = useState<string>('')
+  const [confirmPassword, setConfirmPassword] = useState<string>('')
+  const [username, setUsername] = useState<string>('')
+  const [displayName, setDisplayName] = useState<string>('')
+  const [notification, setNotification] = useState<INotification | null>(null)
 
   const handlePostNotification = (status: NotificationStatus, message: string): void => {
     const notification: INotification = {
       status,
       message
-    };
-    setNotification(notification);
-  };
+    }
+    setNotification(notification)
+  }
 
   const isFormEmpty = (): boolean => {
-    return email === '' || password === '' || confirmPassword === '' || username === '' || displayName === '';
+    return (
+      email === '' ||
+      password === '' ||
+      confirmPassword === '' ||
+      username === '' ||
+      displayName === ''
+    )
   }
 
   const isPasswordMatch = (): boolean => {
-    return password === confirmPassword;
-  };
+    return password === confirmPassword
+  }
 
   const validateFormData = (): boolean => {
     if (isFormEmpty()) {
-      handlePostNotification(NotificationStatus.FAILED, 'Please fill all the fields.');
-      return false;
+      handlePostNotification(NotificationStatus.FAILED, 'Please fill all the fields.')
+      return false
     }
 
     if (!isPasswordMatch()) {
-      handlePostNotification(NotificationStatus.FAILED, 'Password and Confirm Password must be the same.');
-      return false;
+      handlePostNotification(
+        NotificationStatus.FAILED,
+        'Password and Confirm Password must be the same.'
+      )
+      return false
     }
 
-    return true;
-  };
+    return true
+  }
 
   const handleSubmit = async (e: FormEvent): Promise<void> => {
-    e.preventDefault();
+    e.preventDefault()
 
-    if (!validateFormData())
-      return;
+    if (!validateFormData()) return
 
     try {
       const payload = {
@@ -57,18 +65,18 @@ const RegisterPage = (): JSX.Element => {
         password: password,
         username: username,
         displayName: displayName
-      };
+      }
 
-      await apiPost('http://localhost:8000/api/v1/users/create', payload);
+      await apiPost('http://localhost:8000/api/v1/users/create', payload)
     } catch (error) {
-      handlePostNotification(NotificationStatus.FAILED, 'Failed to register.');
-      return;
+      handlePostNotification(NotificationStatus.FAILED, 'Failed to register.')
+      return
     }
 
-    handlePostNotification(NotificationStatus.SUCCESS, 'Register successful.');
+    handlePostNotification(NotificationStatus.SUCCESS, 'Register successful.')
     setTimeout(() => {
       navigate('/auth/login')
-    }, 500);
+    }, 500)
   }
 
   useEffect(() => {
@@ -76,9 +84,8 @@ const RegisterPage = (): JSX.Element => {
       setTimeout(() => {
         setNotification(null)
       }, 5000)
-    };
-
-  }, [notification]);
+    }
+  }, [notification])
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-discord">

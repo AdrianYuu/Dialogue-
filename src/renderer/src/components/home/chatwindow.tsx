@@ -1,30 +1,30 @@
 import DummyPP from '@renderer/assets/images/dummypp.png'
 import Arrow from '@renderer/assets/images/arrow.png'
-import { IConversation } from '@renderer/interfaces/ConversationInterface';
-import { IMessage } from '@renderer/interfaces/MessageInterface';
-import ChatBubble from '../ChatBubble';
-import { IUser } from '@renderer/interfaces/UserInterface';
-import { useState } from 'react';
+import { IConversation } from '@renderer/interfaces/ConversationInterface'
+import { IMessage } from '@renderer/interfaces/MessageInterface'
+import ChatBubble from '../ChatBubble'
+import { IUser } from '@renderer/interfaces/UserInterface'
+import { useState } from 'react'
 
 interface ChatWindowProps {
-  user: IUser;
-  conversation: IConversation;
-  messages: IMessage[];
+  user: IUser
+  conversation: IConversation
+  messages: IMessage[]
 
-  onSubmitChat: () => void;
-};
+  onSubmitChat: (text: string) => void
+}
 
 const ChatWindow = (props: ChatWindowProps) => {
-  const [text, setText] = useState<string>('');
+  const [text, setText] = useState<string>('')
 
   const handleInputchange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setText(e.target.value);
-  };
+    setText(e.target.value)
+  }
 
   const handleSubmitChat = () => {
-    props.onSubmitChat();
-    setText('');
-  };
+    props.onSubmitChat(text)
+    setText('')
+  }
 
   return (
     <div className="bg-gray-700 flex flex-col justify-between w-full gap-5">
@@ -55,7 +55,7 @@ const ChatWindow = (props: ChatWindowProps) => {
         </div>
       </>
     </div>
-  );
-};
+  )
+}
 
-export default ChatWindow;
+export default ChatWindow
